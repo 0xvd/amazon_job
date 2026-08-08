@@ -7,7 +7,7 @@ import time
 import pathlib
 
 from curl_cffi import requests, CurlMime, CurlOpt
-
+from curl_cffi.requests.exceptions import ProxyError
 from awf_challenge import AwfSolver
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
@@ -285,10 +285,13 @@ class WebShare(BaseRequest):
         return self.proxies[0]
 
     def rotate(self):
+        if not self.proxies:
+            raise RuntimeError("No proxies available")
+
         self.proxies.append(self.proxies.pop(0))
         self._rotation_count += 1
 
-        if self._rotation_count >= len(self.proxies):
+        if self._rotation_count == len(self.proxies):
             self._rotation_count = 0
             self._rotate_api()
 
@@ -371,7 +374,7 @@ class WebShare(BaseRequest):
 
     def _call_api(self, *, path, headers=None, **kwargs):  
         headers = {'Authorization': f'Token {self.key['key']}', **(headers or {})}
-        return self.request(url=f'https://proxy.webshare.io/api/v2/{path}', headers=headers, **kwargs).json()
+        return super().request(url=f'https://proxy.webshare.io/api/v2/{path}', headers=headers, **kwargs).json()
 
     def _load_all_proxies(self):
         data = self._call_api(path="proxy/list/", params={"mode": "direct"})
@@ -388,9 +391,8 @@ class WebShare(BaseRequest):
     def _check_quota(self):
         return self._call_api(path='stats/aggregate')
 
-class AmazonRequest(BaseRequest):
-    def __init__(self, req: BaseRequest, region='UK'):
-        super().__init__(session=req.session)
+class AmazonRequest(WebShare):
+    def __init__(self, req: BaseRequest, logger, region='UK'):
         self.api_base = "https://auth.hiring.amazon.com/api"
         self.region_detail = REGIONS.get(region) or REGIONS['UK']
         self.region = self.region_detail['countryCode']
@@ -401,6 +403,9 @@ class AmazonRequest(BaseRequest):
         self.cwr_interaction = 0
         self.waf_token = None
         self.csrf = None
+        super().__init__(req)
+
+        self.logger = logger()
 
     def aws_waf(self):
         if self.waf_token:
@@ -447,7 +452,25 @@ class AmazonRequest(BaseRequest):
     ):        
         self.aws_waf()
         self._get_csrf()
-        return super().request(url=url, method=method, headers=headers, params=params, data=data, timeout=timeout, allow_status_codes=allow_status_codes, **kwargs)
+        proxy = self.get_proxy()
+        self.logger.info(f'Using proxy {proxy}')
+        _request = {
+            'url': url, 
+            'method': method, 
+            'headers': headers, 
+            'params': params, 
+            'data': data, 
+            'timeout': timeout, 
+            'allow_status_codes': allow_status_codes,
+            'proxy': proxy,
+            **kwargs
+        }
+        try:
+            return super().request(**_request)
+        except ProxyError:
+            self.logger.warn('Got Proxy error roatating proxy')
+            self.rotate()
+            return self.request(**_request)
 
     def call_auth_api(self, path, payload=None, params=None, headers=None, **kwargs):
         method = 'GET'
@@ -539,3 +562,7 @@ class AmazonRequest(BaseRequest):
             },
             **kwargs
         ).json()
+
+if __name__ == '__main__':
+    web_share = WebShare(BaseRequest())
+    print(web_share.get_proxy())
