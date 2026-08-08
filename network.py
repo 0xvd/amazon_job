@@ -491,7 +491,6 @@ class AmazonRequest(WebShare):
             method=method,
             headers=headers,
             params=params,
-            headers=headers,
             data=data,
             timeout=timeout,
             allow_status_codes=allow_status_codes,
