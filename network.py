@@ -437,9 +437,9 @@ class AmazonRequest(WebShare):
         self.cwr_interaction = 0
         self.waf_token = None
         self.csrf = None
-        super().__init__(req)
-
         self.logger = logger()
+        super().__init__(req, self.logger)
+
 
     def aws_waf(self):
         if self.waf_token:
