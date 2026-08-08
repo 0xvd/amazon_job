@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+test.py
+tes.py
+WEB_SHARE_KEYS.txt

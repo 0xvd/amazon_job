@@ -1,0 +1,4 @@
+certifi==2026.6.17
+curl_cffi==0.15.0
+cryptography
+websocket

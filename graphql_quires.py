@@ -1,0 +1,56 @@
+JOB_SEARCH_BY_LOCATION = '''
+query searchJobCardsByLocation($searchJobRequest: SearchJobRequest!) {
+  searchJobCardsByLocation(searchJobRequest: $searchJobRequest) {
+    nextToken
+    jobCards {
+      jobId
+      language
+      dataSource
+      requisitionType
+      jobTitle
+      jobType
+      employmentType
+      city
+      state
+      postalCode
+      locationName
+      totalPayRateMin
+      totalPayRateMax
+      tagLine
+      bannerText
+      image
+      jobPreviewVideo
+      distance
+      featuredJob
+      bonusJob
+      bonusPay
+      scheduleCount
+      currencyCode
+      geoClusterDescription
+      surgePay
+      jobTypeL10N
+      employmentTypeL10N
+      bonusPayL10N
+      surgePayL10N
+      totalPayRateMinL10N
+      totalPayRateMaxL10N
+      distanceL10N
+      monthlyBasePayMin
+      monthlyBasePayMinL10N
+      monthlyBasePayMax
+      monthlyBasePayMaxL10N
+      jobContainerJobMetaL1
+      virtualLocation
+      poolingEnabled
+      payFrequency
+      jobLocationType
+      internalStaffingOrgId
+      agencyName
+      advertisedBasePay
+      advertisedBasePayL10N
+      advertisedPayFrequency
+      advertisedPayFrequencyL10N
+    }
+  }
+}
+'''
