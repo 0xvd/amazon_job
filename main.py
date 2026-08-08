@@ -12,7 +12,7 @@ from utils import search_regex
 from utils._utils import url_or_none
 from utils.traversal import traverse_obj
 from models import evaluate_question, evaluate_scale_question, evaluate_item_code
-from test import UKMapSearcher
+from searcher import UKMapSearcher
 
 class AmazonJob(
     AmazonRequest,
