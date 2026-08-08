@@ -263,7 +263,7 @@ class BaseRequest:
 class WebShare(BaseRequest):
     LIMIT = 1_000_000
 
-    def __init__(self, req: BaseRequest):
+    def __init__(self, req: BaseRequest, logger):
         super().__init__(session=req.session)
         self.key = None
         self.file = pathlib.Path("WEB_SHARE_KEYS.txt")
@@ -274,6 +274,7 @@ class WebShare(BaseRequest):
         self._load_all_keys()
         self.get_key()
         self._load_all_proxies()
+        self.logger = logger
 
     def get_key(self):
         if not self.active_keys:
@@ -391,6 +392,39 @@ class WebShare(BaseRequest):
     def _check_quota(self):
         return self._call_api(path='stats/aggregate')
 
+    def request(
+        self,
+        *,
+        url: str,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
+        params: dict | None = None,
+        data: bytes | dict | None = None,
+        timeout: float = 20,
+        allow_status_codes: int | tuple  = None,
+        **kwargs,
+    ):      
+        proxy = self.get_proxy()
+        self.logger.info(f'Using proxy {proxy}')
+        _request = {
+            'url': url, 
+            'method': method, 
+            'headers': headers, 
+            'params': params, 
+            'data': data, 
+            'timeout': timeout, 
+            'allow_status_codes': allow_status_codes,
+            'proxy': proxy,
+            **kwargs
+        }
+        try:
+            return super().request(**_request)
+        except ProxyError:
+            self.logger.warn('Got Proxy error roatating proxy')
+            self.rotate()
+            return self.request(**_request)
+
+
 class AmazonRequest(WebShare):
     def __init__(self, req: BaseRequest, logger, region='UK'):
         self.api_base = "https://auth.hiring.amazon.com/api"
@@ -452,25 +486,17 @@ class AmazonRequest(WebShare):
     ):        
         self.aws_waf()
         self._get_csrf()
-        proxy = self.get_proxy()
-        self.logger.info(f'Using proxy {proxy}')
-        _request = {
-            'url': url, 
-            'method': method, 
-            'headers': headers, 
-            'params': params, 
-            'data': data, 
-            'timeout': timeout, 
-            'allow_status_codes': allow_status_codes,
-            'proxy': proxy,
+        return super().request(
+            url=url,
+            method=method,
+            headers=headers,
+            params=params,
+            headers=headers,
+            data=data,
+            timeout=timeout,
+            allow_status_codes=allow_status_codes,
             **kwargs
-        }
-        try:
-            return super().request(**_request)
-        except ProxyError:
-            self.logger.warn('Got Proxy error roatating proxy')
-            self.rotate()
-            return self.request(**_request)
+        )
 
     def call_auth_api(self, path, payload=None, params=None, headers=None, **kwargs):
         method = 'GET'
@@ -562,7 +588,3 @@ class AmazonRequest(WebShare):
             },
             **kwargs
         ).json()
-
-if __name__ == '__main__':
-    web_share = WebShare(BaseRequest())
-    print(web_share.get_proxy())
